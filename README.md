@@ -2,8 +2,6 @@
 
 The simulation of major components in a simple operating system, for example, scheduler synchronization, related operations of physical memory and virtual memory.
 
-Visit my [documentation](https://ngyngcphu.github.io/Simple-Operating-System/) for more details.
-
 ## Prerequisites
 
 - `Ubuntu` 22.04 LTS
