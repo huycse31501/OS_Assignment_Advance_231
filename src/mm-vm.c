@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-
 static pthread_mutex_t mmvm_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /*enlist_vm_freerg_list - add new rg to freerg_list
@@ -17,6 +16,7 @@ static pthread_mutex_t mmvm_lock = PTHREAD_MUTEX_INITIALIZER;
  *@rg_elmt: new region
  *
  */
+
 int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
 {
   struct vm_rg_struct *rg_node = mm->mmap->vm_freerg_list;
@@ -187,11 +187,6 @@ int pgalloc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
   }
 #ifdef IODUMP
 
-#ifdef OUTPUT_FOLDER
-  FILE *output_file = proc->file;
-  fprintf(output_file, "===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
-  fprintf(output_file, "PID=%d - Region=%d - Address=%08x - Size=%d byte\n", proc->pid, reg_index, addr, size);
-#endif
 
   printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
   printf("PID=%d - Region=%d - Address=%08x - Size=%d byte\n", proc->pid, reg_index, addr, size);
@@ -219,11 +214,7 @@ int pgfree_data(struct pcb_t *proc, uint32_t reg_index)
   }
 #ifdef IODUMP
 
-#ifdef OUTPUT_FOLDER
-  FILE *output_file = proc->file;
-  fprintf(output_file, "===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
-  fprintf(output_file, "PID=%d - Region=%d\n", proc->pid, reg_index);
-#endif
+
 
   printf("===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
   printf("PID=%d - Region=%d\n", proc->pid, reg_index);
@@ -232,6 +223,30 @@ int pgfree_data(struct pcb_t *proc, uint32_t reg_index)
 #endif
 #endif
   return val;
+}
+
+int find_victim_page_lru(struct mm_struct *mm, int *retpgn, int reppgn)
+{
+  struct pgn_t *pg = mm->lru_pgn;
+
+  /* TODO: Implement the theorical mechanism to find the victim page */
+  // LRU
+  if (!pg)
+  {
+    return -1;
+  }
+  int lru_pgn = mm->access_pgn_lst[0];
+  *retpgn = lru_pgn;
+  while (pg)
+  {
+    if (pg->pgn == lru_pgn)
+    {
+      pg->pgn = reppgn;
+      break;
+    }
+    pg = pg->pg_next;
+  }
+  return 0;
 }
 
 /*pg_getpage - get the page in ram
@@ -255,7 +270,12 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
     /* TODO: Play with your paging theory here */
     /* Find victim page */
-    if (find_victim_page(caller->mm, &vicpgn) == -1)
+    /*find_victim_page_lru - find victim page with lru n(least recently used)
+    *@caller: caller
+    *@pgn: return page number
+    *
+    */
+    if (find_victim_page_lru(caller->mm, &vicpgn, pgn) == -1)
     {
       return -1;
     }
@@ -281,11 +301,35 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     /* Update its online status of the target page */
     pte_set_fpn(&mm->pgd[pgn], vicfpn);
 
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
+    // !!! only use in FIFO
+    // enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
+
+    /*page not active, delete first pgn (out of main ram) in access page list and append the new page*/
+    int access_size = caller->mm->pgnum;
+    int i;
+    for (i = 0; i < access_size - 1; i++)
+    {
+      caller->mm->access_pgn_lst[i] = caller->mm->access_pgn_lst[i + 1];
+    }
+    caller->mm->access_pgn_lst[access_size - 1] = pgn;
   }
-
+  else
+  {
+    /*page active, change position of pgn in access page list*/
+    int access_size = caller->mm->pgnum;
+    int i;
+    for (i = 0; i < access_size - 1; i++)
+    {
+      if (caller->mm->access_pgn_lst[i] == pgn)
+      {
+        // swap it with the next element
+        int temp = caller->mm->access_pgn_lst[i];
+        caller->mm->access_pgn_lst[i] = caller->mm->access_pgn_lst[i + 1];
+        caller->mm->access_pgn_lst[i + 1] = temp;
+      }
+    }
+  }
   *fpn = PAGING_FPN(mm->pgd[pgn]);
-
   return 0;
 }
 
@@ -375,12 +419,6 @@ int pgread(
   destination = (uint32_t)data;
 #ifdef IODUMP
 
-#ifdef OUTPUT_FOLDER
-  FILE *output_file = proc->file;
-  fprintf(output_file, "===== PHYSICAL MEMORY AFTER READING =====\n");
-  fprintf(output_file, "read region=%d offset=%d value=%d\n", source, offset, data);
-#endif
-
   printf("===== PHYSICAL MEMORY AFTER READING =====\n");
   printf("read region=%d offset=%d value=%d\n", source, offset, data);
 #ifdef PAGETBL_DUMP
@@ -391,6 +429,7 @@ int pgread(
 
   return val;
 }
+
 
 /*__write - write a region memory
  *@caller: caller
@@ -433,11 +472,6 @@ int pgwrite(
   }
 #ifdef IODUMP
 
-#ifdef OUTPUT_FOLDER
-  FILE *output_file = proc->file;
-  fprintf(output_file, "===== PHYSICAL MEMORY AFTER WRITING =====\n");
-  fprintf(output_file, "write region=%d offset=%d value=%d\n", destination, offset, data);
-#endif
 
   printf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
   printf("write region=%d offset=%d value=%d\n", destination, offset, data);
@@ -602,6 +636,9 @@ int find_victim_page(struct mm_struct *mm, int *retpgn)
 
   return 0;
 }
+
+
+
 
 /*get_free_vmrg_area - get a free vm region
  *@caller: caller

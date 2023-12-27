@@ -23,9 +23,6 @@ static void *timer_routine(void *args)
 {
 	while (!timer_stop)
 	{
-#ifdef OUTPUT_FOLDER
-		fprintf((FILE *)args, "Time slot %3lu\n", current_time());
-#endif
 		printf("Time slot %3lu\n", current_time());
 		int fsh = 0;
 		int event = 0;
@@ -92,19 +89,11 @@ uint64_t current_time()
 	return _time;
 }
 
-#ifdef OUTPUT_FOLDER
-void start_timer(FILE *output_file)
-{
-	timer_started = 1;
-	pthread_create(&_timer, NULL, timer_routine, (void *)output_file);
-}
-#else
 void start_timer()
 {
 	timer_started = 1;
 	pthread_create(&_timer, NULL, timer_routine, NULL);
 }
-#endif
 
 void detach_event(struct timer_id_t *event)
 {

@@ -100,6 +100,9 @@ int vmap_page_range(struct pcb_t *caller,           // process call
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
    */
+  caller->mm->access_pgn_lst = (int *)malloc(pgnum * sizeof(int));
+  caller->mm->pgnum = pgnum;
+
   for (; pgit < pgnum; ++pgit)
   {
     fpit = frames;
@@ -110,8 +113,11 @@ int vmap_page_range(struct pcb_t *caller,           // process call
     /* Tracking for later page replacement activities (if needed)
      * Enqueue new usage page */
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
-  }
 
+    // lru init
+    enlist_pgn_node(&caller->mm->lru_pgn, pgn + pgit);
+    caller->mm->access_pgn_lst[pgit] = pgn + pgit;
+  }
   return 0;
 }
 
@@ -383,43 +389,30 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
   pgn_start = PAGING_PGN(start);
   pgn_end = PAGING_PGN(end);
 
-#ifdef OUTPUT_FOLDER
-  FILE *output_file = caller->file;
-  fprintf(output_file, "print_pgtbl: %d - %d", start, end);
-#endif
+
 
   printf("print_pgtbl: %d - %d", start, end);
   if (caller == NULL)
   {
-#ifdef OUTPUT_FOLDER
-    fprintf(output_file, "NULL caller\n");
-#endif
+
     printf("NULL caller\n");
     return -1;
   }
-#ifdef OUTPUT_FOLDER
-  fprintf(output_file, "\n");
-#endif
+
   printf("\n");
 
   for (pgit = pgn_start; pgit < pgn_end; pgit++)
   {
-#ifdef OUTPUT_FOLDER
-    fprintf(output_file, "%08ld: %08x\n", pgit * sizeof(uint32_t), caller->mm->pgd[pgit]);
-#endif
+
     printf("%08ld: %08x\n", pgit * sizeof(uint32_t), caller->mm->pgd[pgit]);
   }
 
   for (pgit = pgn_start; pgit < pgn_end; pgit++)
   {
-#ifdef OUTPUT_FOLDER
-    fprintf(output_file, "Page Number: %d -> Frame Number: %d\n", pgit, PAGING_FPN(caller->mm->pgd[pgit]));
-#endif
+
     printf("Page Number: %d -> Frame Number: %d\n", pgit, PAGING_FPN(caller->mm->pgd[pgit]));
   }
-#ifdef OUTPUT_FOLDER
-  fprintf(output_file, "================================================================\n");
-#endif
+
   printf("================================================================\n");
 
   return 0;

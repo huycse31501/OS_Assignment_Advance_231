@@ -1,5 +1,6 @@
 #ifndef OSMM_H
 #define OSMM_H
+
 #include <string.h>
 
 #define MM_PAGING
@@ -56,6 +57,11 @@ struct mm_struct {
 
    /* list of free page */
    struct pgn_t *fifo_pgn;
+
+   /* free lru page */
+   struct pgn_t *lru_pgn;
+   int *access_pgn_lst;
+   int pgnum;
 };
 
 /*
@@ -81,8 +87,6 @@ struct memphy_struct {
    /* Management structure */
    struct framephy_struct *free_fp_list;
    struct framephy_struct *used_fp_list;
-   FILE *file;
-
 };
 
 #endif
