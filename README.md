@@ -9,11 +9,11 @@ The simulation of major components in a simple operating system, for example, sc
 ## Commands
 
 - `make all`: compile the whole source code.
-- `./os [path to configure file] [path to output file]`: run simulation  
-`[path to configure file]` in folder **input** and `[path to output file]` is name of output file which you want to set in folder **output**, example:
+- `./os [path to configure file]`: run simulation  
+`[path to configure file]` in folder **input**
 ```sh
 make all
-./os os_0_mlq_paging os_0_mlq_paging.output
+./os os_0_mlq_paging
 ```
 
 ## Project structure
