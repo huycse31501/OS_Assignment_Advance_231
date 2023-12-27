@@ -114,8 +114,8 @@ int vmap_page_range(struct pcb_t *caller,           // process call
      * Enqueue new usage page */
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
 
-    // lru init
-    enlist_pgn_node(&caller->mm->lru_pgn, pgn + pgit);
+    // mru init
+    enlist_pgn_node(&caller->mm->mru_pgn, pgn + pgit);
     caller->mm->access_pgn_lst[pgit] = pgn + pgit;
   }
   return 0;

@@ -225,21 +225,21 @@ int pgfree_data(struct pcb_t *proc, uint32_t reg_index)
   return val;
 }
 
-int find_victim_page_lru(struct mm_struct *mm, int *retpgn, int reppgn)
+int find_victim_page_mru(struct mm_struct *mm, int *retpgn, int reppgn)
 {
-  struct pgn_t *pg = mm->lru_pgn;
+  struct pgn_t *pg = mm->mru_pgn;
 
   /* TODO: Implement the theorical mechanism to find the victim page */
-  // LRU
+  // MRU
   if (!pg)
   {
     return -1;
   }
-  int lru_pgn = mm->access_pgn_lst[0];
-  *retpgn = lru_pgn;
+  int mru_pgn = mm->access_pgn_lst[-1];
+  *retpgn = mru_pgn;
   while (pg)
   {
-    if (pg->pgn == lru_pgn)
+    if (pg->pgn == mru_pgn)
     {
       pg->pgn = reppgn;
       break;
@@ -270,12 +270,12 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
     /* TODO: Play with your paging theory here */
     /* Find victim page */
-    /*find_victim_page_lru - find victim page with lru n(least recently used)
+    /*find_victim_page_mru - find victim page with mru n(least recently used)
     *@caller: caller
     *@pgn: return page number
     *
     */
-    if (find_victim_page_lru(caller->mm, &vicpgn, pgn) == -1)
+    if (find_victim_page_mru(caller->mm, &vicpgn, pgn) == -1)
     {
       return -1;
     }

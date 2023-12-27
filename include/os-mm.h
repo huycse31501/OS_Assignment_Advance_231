@@ -58,8 +58,8 @@ struct mm_struct {
    /* list of free page */
    struct pgn_t *fifo_pgn;
 
-   /* free lru page */
-   struct pgn_t *lru_pgn;
+   /* free mru page */
+   struct pgn_t *mru_pgn;
    int *access_pgn_lst;
    int pgnum;
 };
